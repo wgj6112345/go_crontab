@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分布式Crontab</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 页头 -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h1>管理后台<small>Contrab</small></h1>
+                </div>
+            </div>
+        </div>
+        <!-- 新建任务按钮 -->
+        <div class="row">
+            <div class="col-md-12">
+                <button id="new-job" type="button" class="btn btn-primary">新建任务</button>
+                <button id="health-node" type="button" class="btn btn-success">健康节点</button>
+            </div>
+        </div>
+        <!-- 任务列表 -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default" style="margin-top: 20px;">
+                    <div class="panel-body">
+                        <table id="job-table" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <td>任务名称</td>
+                                    <td>shell命令</td>
+                                    <td>cron表达式</td>
+                                    <td>超时时间</td>
+                                    <td>任务操作</td>
+                                </tr>
+                            </thead>
+                            <tbody id="job-list">
+                                <!-- 任务 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- 模态框 -->
+    <!-- 任务模态框 -->
+    <div id="edit-job" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">编辑任务</h4>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="edit-name">任务名称</label>
+                            <input id="edit-name" type="text" class="form-control" placeholder="任务名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-command">Command</label>
+                            <input id="edit-command" type="text" class="form-control" placeholder="Command">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-expr">Cron表达式</label>
+                            <input id="edit-expr" type="text" class="form-control" placeholder="Cron表达式">
+                        </div>
+                        <div class="form-group">
+                            <label for="job-timeout">超时时间(秒)</label>
+                            <input id="job-timeout" type="text" class="form-control" placeholder="超时时间">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button id="save-job" type="button" class="btn btn-primary">保存</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!-- 日志模态框 -->
+    <div id="list-log" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">任务日志</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr style="text-align: center;">
+                                <th>Shell</th>
+                                <th style="width: 50px;">错误</th>
+                                <th>输出</th>
+                                <th>计划开始</th>
+                                <th>实际调度</th>
+                                <th>开始执行</th>
+                                <th>结束执行</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-item">
+
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+<!-- 健康节点模态框 -->
+    <div id="worker-list" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">健康节点</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr style="text-align: center;">
+                                <th>worker 节点</th>
+                            </tr>
+                        </thead>
+                        <tbody id="worker-item" style="margin-top: 20px;">
+    
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+
+    <script>
+        $(document).ready(function(){
+            // 新建任务
+            $("#new-job").on("click", function(event) {
+
+                // 获取 job 的信息
+                $("#edit-name").val("");
+                $("#edit-command").val("");
+                $("#edit-expr").val("");
+                $("#job-timeout").val("");
+
+                // 弹出模态框
+                $("#edit-job").modal("show");                
+            })
+
+            // 健康节点
+            $("#health-node").on("click", function (event) {
+                $("#worker-item").empty()
+                // 获取 workers 的节点
+                $.ajax({
+                    url: "/worker/list",
+                    type: "get",
+                    dataType: "json",
+                    success: function(result) {
+                        $.each(result.data, function(i, data) {
+                            var data = result.data[i]
+
+                            var tr = `
+                            <td><span class="label label-success" style="font-size: 14px;">` + data + `</span></td>
+                            `
+                            $("#worker-item").append(tr)
+                        })
+                    },
+                    error: function(e) {
+                        console.log(e)
+                    }
+                })
+                // 弹出模态框
+                $("#worker-list").modal("show");
+            })
+
+
+            // 绑定按钮事件
+            // 编辑
+            $("#job-table").on("click", ".edit-job", function (event) {
+                var jobName =  $(this).parents("tr").children(".job-name").text();
+
+                // 获取 job 的信息
+                $("#edit-name").val($(this).parents("tr").children(".job-name").text());
+                $("#edit-command").val($(this).parents("tr").children(".job-command").text());
+                $("#edit-expr").val($(this).parents("tr").children(".job-expr").text());
+                var timeout = $(this).parents("tr").children(".job-timeout").text()
+                timeout = timeout.replace("秒", "")
+                $("#job-timeout").val(timeout);
+                // 弹出模态框
+                $("#edit-job").modal("show");
+
+            })  
+            // 删除
+            $("#job-table").on("click", ".delete-job", function (event) {
+                var jobName = $(this).parents("tr").children(".job-name").text();
+                $.ajax({
+                    url: "/job/delete",
+                    type: "post",
+                    dataType: "json",
+                    data: {"name": jobName},
+                    success: function(result) {
+                        console.log(result)
+                        window.location.reload()
+                    },
+                    error: function(e) {
+                        console.log(e)
+                    }
+                })
+            })
+
+            // 强杀
+            $("#job-table").on("click", ".kill-job", function (event) {
+                var jobName = $(this).parents("tr").children(".job-name").text();
+                $.ajax({
+                    url: "/job/kill",
+                    type: "post",
+                    dataType: "json",
+                    data: { "name": jobName},
+                    success: function (result) {
+                        console.log(result)
+                         window.location.reload()
+                    },
+                    error: function (e) {
+                        console.log(e)
+                    }
+                })
+            })
+
+            // 日志
+            $("#job-table").on("click", ".list-log", function (event) {
+                var tbody = $("#log-item");
+                tbody.empty()
+
+                var jobName = $(this).parents("tr").children(".job-name").text();
+                $.ajax({
+                    url: "/job/log",
+                    type: "post",
+                    dataType: "json",
+                    data: { "name": jobName },
+                    success: function (result) {
+                        console.log("日志：",result)
+
+                        $.each(result.data, function(i, data){
+                            var data = result.data[i];
+
+                            // 去掉时间项里面的 T 和 Z
+                            // var plan_time = stripLetter(data.plan_time)
+                            // var real_time = stripLetter(data.real_time)
+                            // var start_time = stripLetter(data.start_time)
+                            // var end_time = stripLetter(data.end_time)
+
+                            var tr = `
+                            <tr>
+                                <td>`+ data.command + `</td>
+                                <td>` + data.err + `</td>
+                                <td>` + data.output + `</td>
+                                <td>` + data.plan_time + `</td>
+                                <td>` + data.real_time + `</td>
+                                <td>` + data.start_time + `</td>
+                                <td>` + data.end_time + `</td>
+                            </tr>
+                            `
+                            tbody.append(tr);
+                        })
+                        // 弹出模态框
+                        $("#list-log").modal("show");
+                    },
+                    error: function (e) {
+                        console.log(e)
+                    }
+                })
+            })            
+
+
+
+            $("#save-job").on("click", function(event) {
+
+                var data = {
+                        "name": $("#edit-name").val(),
+                        "command": $("#edit-command").val(),
+                        "cron_expr": $("#edit-expr").val(),
+                        "job_timeout": parseInt($("#job-timeout").val())
+                    };
+
+                console.log("data: ", data)
+                $.ajax({
+                    url: "/job/save",
+                    type: "post",
+                    data: {job: JSON.stringify(data)},
+                    dataType: "json",
+                    success: function(result) {
+                        console.log("保存 result: ", result)
+                        window.location.reload();
+                    },
+                    error: function(e) {
+                        console.log(e)
+                    }
+                })
+
+            })
+
+            // ajax 获取 任务列表
+            function getJobList(){
+                $.ajax({
+                    url: "/job/list",
+                    type: "get",
+                    dataType: "json",
+                    success: function(result) {
+                        console.log("result ", result)
+
+                        var tbody =  $("#job-list");
+                        $.each(result.data, function(i, data) {
+                            var data = result.data[i];
+
+                            var tr = `
+                                <tr>
+                                    <td class="job-name">`+ data.name + `</td>
+                                    <td class="job-command">` + data.command + `</td>
+                                    <td class="job-expr">` + data.cron_expr + `</td>
+                                    <td class="job-timeout">` + data.job_timeout + `秒</td>
+                                    <td>
+                                        <div class="btn-toolbar">
+                                            <button class="btn btn-info edit-job">编辑</button>
+                                            <button class="btn btn-primary delete-job">删除</button>
+                                            <button class="btn btn-danger kill-job">强杀</button>
+                                            <button class="btn btn-warning list-log">日志</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `
+                            tbody.append(tr);
+                        })
+                    
+                    },
+                    error: function(e) {
+                        console.log(e)
+                    }
+                }) 
+            }
+            getJobList()
+
+            // 
+            function stripLetter(t) {
+                var value = ""
+                value = t.replace("T", " ")
+                value = value.replace("Z", "")
+                return value
+            }
+        })
+    </script>
+</body>
+</html>

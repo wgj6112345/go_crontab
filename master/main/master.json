@@ -1,0 +1,19 @@
+{
+    "api_port": 10020,
+    "api_read_timeout": 5000,
+    "api_write_timeout": 5000,
+
+    "etcd_points": ["127.0.0.1:2379"],
+    "etcd_dial_timeout": 5000,
+
+    "static_dir": "./static",
+    "view_dir": "./view",
+
+    "mongodb_host": "127.0.0.1:27017",
+    "mongodb_connect_timeout": 5000,
+    "mongodb_database": "cron",
+    "mongodb_collection": "log",
+
+    "job_log_skip": 0,
+    "job_log_limit": 20
+}
