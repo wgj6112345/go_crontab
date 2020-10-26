@@ -113,8 +113,9 @@ func Unmarshal(content []byte) (job *CronJob, err error) {
 		cronJob CronJob
 	)
 
+	fmt.Println("content: ", string(content))
 	if err = json.Unmarshal(content, &cronJob); err != nil {
-		fmt.Println("err: ", err)
+		fmt.Println("common json unmarshal err: ", err)
 	}
 
 	job = &cronJob

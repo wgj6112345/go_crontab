@@ -1,0 +1,115 @@
+# 创建 配置文件 对应的configmap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-master
+data:
+  config: |
+    api_port: 10020,
+    api_read_timeout: 5000,
+    api_write_timeout: 5000,
+    static_dir = "./static"
+    "view_dir" = "./view"
+    etcd_points = "127.0.0.1:2379"
+    etcd_dial_timeout = 5000
+    mongodb_host = "127.0.0.1:27017"
+    mongodb_connect_timeout = 5000
+    mongodb_database = "cron"
+    mongodb_collection = "log"
+    job_log_skip = 0
+    job_log_limit = 20
+
+# 创建 master deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels: 
+    app: crontab-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crontab-master 
+  template:
+    metadata:
+      labels:
+        app: crontab-master 
+    spec:   
+      containers:
+        - name: crontab-master
+          image: crontab-master:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: master-port
+          env:
+            - name: api_port
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.api_port
+            - name: api_read_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.api_read_timeout
+            - name: api_write_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.api_write_timeout
+            - name: static_dir
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.static_dir
+            - name: view_dir
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.view_dir
+            - name: etcd_points
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.etcd_points
+            - name: etcd_dial_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.etcd_dial_timeout
+            - name: mongodb_host
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.mongodb_host
+            - name: mongodb_connect_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.mongodb_connect_timeout
+            - name: mongodb_database
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.mongodb_database
+            - name: mongodb_collection
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.mongodb_collection
+            - name: job_log_skip
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.job_log_skip
+            - name: job_log_limit
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-master.job_log_limit
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crontab-master
+spec:
+  ports:
+    - port: 8080
+      name: "http"
+      targetPort: 8080
+      protocol: TCP
+      nodePort: 30080
+  type: NodePort
+  selector:
+    name: crontab-master

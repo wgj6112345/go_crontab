@@ -1,0 +1,14 @@
+FROM golang:latest AS builder
+
+WORKDIR /go/src/github.com/wgj6112345/go_crontab
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -a installsuffix cgo main.go
+
+
+FROM scratch AS prod
+
+COPY --from=builder /go/src/github.com/wgj6112345/go_crontab/main .
+
+CMD ["/main"]

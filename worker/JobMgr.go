@@ -75,6 +75,8 @@ func (jobMgr *JobMgr) watchJobs() {
 		fmt.Println(err)
 	}
 
+	fmt.Println("prefix cronJobKey: ", common.CRON_JOB_DIR, string(getResp.Kvs[0].Value))
+
 	if len(getResp.Kvs) != 0 {
 		for _, kvpair := range getResp.Kvs {
 			if cronJob, err = common.Unmarshal(kvpair.Value); err != nil {
@@ -93,7 +95,7 @@ func (jobMgr *JobMgr) watchJobs() {
 		watchStartRevision = getResp.Header.Revision + 1
 
 		if watchChan = jobMgr.watcher.Watch(context.TODO(), common.CRON_JOB_DIR, clientv3.WithRev(watchStartRevision), clientv3.WithPrefix()); err != nil {
-			fmt.Println(err)
+			fmt.Println("watcher Watch: ", err)
 			return
 		}
 
@@ -104,7 +106,7 @@ func (jobMgr *JobMgr) watchJobs() {
 					// 更新事件
 					fmt.Println("更新")
 					if cronJob, err = common.Unmarshal(event.Kv.Value); err != nil {
-						fmt.Println(err)
+						fmt.Println("更新：", err)
 						continue
 					}
 
@@ -138,7 +140,7 @@ func (jobMgr *JobMgr) watchKill() {
 	// 开启 协程监听  kill
 	go func() {
 		if watchChan = jobMgr.watcher.Watch(context.TODO(), common.CRON_KILL_JOB_DIR, clientv3.WithPrefix()); err != nil {
-			fmt.Println(err)
+			fmt.Println("watcher watch kill: ", err)
 			return
 		}
 

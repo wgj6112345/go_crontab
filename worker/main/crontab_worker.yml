@@ -1,0 +1,90 @@
+# 创建 配置文件 对应的configmap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-worker
+data:
+  config: |
+    etcd_points = "127.0.0.1:2379"
+    etcd_dial_timeout = 5000
+    mongodb_host = "127.0.0.1:27017"
+    mongodb_connect_timeout = 5000
+    mongodb_database = "cron"
+    mongodb_collection = "log"
+    log_batch_size = 100
+    log_commit_timeout = 1000
+
+# 创建 worker deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels: 
+    app: crontab-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: crontab-worker 
+  template:
+    metadata:
+      labels:
+        app: crontab-worker 
+    spec:   
+      containers:
+        - name: crontab-worker
+          image: crontab-worker:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: worker-port
+          env:
+            - name: etcd_points
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.etcd_points
+            - name: etcd_dial_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.etcd_dial_timeout
+            - name: mongodb_host
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.mongodb_host
+            - name: mongodb_connect_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.mongodb_connect_timeout
+            - name: mongodb_database
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.mongodb_database
+            - name: mongodb_collection
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.mongodb_collection
+            - name: log_batch_size
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.log_batch_size
+            - name: log_commit_timeout
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-worker.log_commit_timeout
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crontab-worker
+spec:
+  ports:
+    - port: 8080
+      name: "http"
+      targetPort: 8080
+      protocol: TCP
+      nodePort: 30080
+  type: NodePort
+  selector:
+    name: crontab-worker

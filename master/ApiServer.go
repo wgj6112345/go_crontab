@@ -148,9 +148,9 @@ func handleJobList(w http.ResponseWriter, r *http.Request) {
 		goto ERR
 	}
 
-	// for _, job = range jobList {
-	// 	fmt.Println("job: ", job.Name)
-	// }
+	for _, job := range jobList {
+		fmt.Println("job: ", job.Name)
+	}
 
 	if bytes, err = common.BuildResponse(0, "success", jobList); err == nil {
 		w.Write(bytes)

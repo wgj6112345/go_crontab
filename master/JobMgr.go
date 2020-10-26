@@ -74,11 +74,20 @@ func (m *JobMgr) SaveJob(cronJob *common.CronJob) (oldJob common.CronJob, err er
 		return
 	}
 
-	fmt.Println("job 保存成功")
+	fmt.Println("job 保存成功, cronJobKey: ", cronJobKey, "string(bytes): ", string(bytes))
+
+	// 尝试 get
+	var getResp *clientv3.GetResponse
+	if getResp, err = m.kv.Get(context.TODO(), cronJobKey); err != nil {
+		fmt.Println("etcd get err: ", err)
+		return
+	}
+	fmt.Println("cronJobKey: ", cronJobKey, string(getResp.Kvs[0].Value))
+
 	// 如果是更新 ，返回旧值
 	if putResp.PrevKv != nil {
 		if err = json.Unmarshal(putResp.PrevKv.Value, &oldJob); err != nil {
-			fmt.Println("err: ", err)
+			fmt.Println("json unmarshal err: ", err)
 			err = nil //反序列化失败，可以忽略
 			return
 		}
